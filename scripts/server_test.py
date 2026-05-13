@@ -21,7 +21,7 @@ from agentic_stack.config import DEFAULT_CONFIG, load_config, subprocess_env
 DEFAULT_CALLS = {
     "holidays": (
         "is_public_holiday",
-        {"country_code": "IT", "on_date": "2026-04-25"},
+        {"country_code": "CN", "on_date": "2026-10-01"},
     ),
     "ops": ("get_current_oncall", {}),
 }
@@ -31,7 +31,7 @@ async def run(server_name: str, tool_name: str, arguments: dict) -> None:
     config = load_config(DEFAULT_CONFIG)
     if server_name not in config.mcp_servers:
         known = ", ".join(sorted(config.mcp_servers))
-        raise SystemExit(f"Unknown server {server_name!r}. Known servers: {known}")
+        raise SystemExit(f"未知服务 {server_name!r}。可用服务：{known}")
 
     server = config.mcp_servers[server_name]
     params = StdioServerParameters(
@@ -43,12 +43,12 @@ async def run(server_name: str, tool_name: str, arguments: dict) -> None:
         async with ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            print("Tools:")
+            print("工具列表：")
             for tool in listed.tools:
                 first_line = (tool.description or "").splitlines()[0]
                 print(f"  - {tool.name}: {first_line}")
 
-            print(f"\nCalling {tool_name}({arguments}):")
+            print(f"\n正在调用 {tool_name}({arguments})：")
             result = await session.call_tool(tool_name, arguments=arguments)
             for chunk in result.content:
                 text = getattr(chunk, "text", None)
@@ -56,10 +56,10 @@ async def run(server_name: str, tool_name: str, arguments: dict) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Call one MCP server tool directly.")
+    parser = argparse.ArgumentParser(description="直接调用某个 MCP Server 工具。")
     parser.add_argument("server", nargs="?", default="holidays", choices=sorted(DEFAULT_CALLS))
     parser.add_argument("tool", nargs="?")
-    parser.add_argument("arguments", nargs="?", help="Tool arguments as a JSON object.")
+    parser.add_argument("arguments", nargs="?", help="工具参数，格式为 JSON 对象。")
     return parser
 
 
@@ -69,7 +69,7 @@ def main() -> int:
     tool_name = args.tool or default_tool
     arguments = json.loads(args.arguments) if args.arguments else default_arguments
     if not isinstance(arguments, dict):
-        raise SystemExit("arguments must be a JSON object")
+        raise SystemExit("arguments 必须是 JSON 对象")
     asyncio.run(run(args.server, tool_name, arguments))
     return 0
 

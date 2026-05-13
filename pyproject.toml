@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-mcp-skill-demo"
 version = "0.1.0"
-description = "LLM agent demo with OpenAI SDK-compatible chat models, MCP servers, and Markdown skills."
+description = "使用 OpenAI SDK 兼容模型、MCP Server 和 Markdown Skill 的中文 Agent 示例。"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }

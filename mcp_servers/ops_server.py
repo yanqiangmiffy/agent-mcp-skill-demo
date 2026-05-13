@@ -25,7 +25,7 @@ mcp = FastMCP("ops")
 
 @mcp.tool()
 def get_current_oncall() -> dict[str, Any]:
-    """Return the engineer currently on call."""
+    """返回当前值班工程师。"""
     missing = _missing_db_error()
     if missing:
         return missing
@@ -44,7 +44,7 @@ def get_current_oncall() -> dict[str, Any]:
             """,
             (now, now),
         ).fetchone()
-    return dict(row) if row else {"error": "no engineer is currently on call"}
+    return dict(row) if row else {"error": "当前没有工程师在值班"}
 
 
 @mcp.tool()
@@ -52,7 +52,7 @@ def list_open_issues(
     priority: str | None = None,
     assignee_id: int | None = None,
 ) -> list[dict[str, Any]]:
-    """List open issues, optionally filtered by priority and assignee."""
+    """列出开放问题，可按优先级和负责人过滤。"""
     missing = _missing_db_error()
     if missing:
         return [missing]
@@ -79,7 +79,7 @@ def list_open_issues(
 
 @mcp.tool()
 def get_engineer(github_login: str) -> dict[str, Any]:
-    """Find an engineer by GitHub login."""
+    """按 GitHub 账号查找工程师。"""
     missing = _missing_db_error()
     if missing:
         return missing
@@ -93,12 +93,12 @@ def get_engineer(github_login: str) -> dict[str, Any]:
             """,
             (github_login,),
         ).fetchone()
-    return dict(row) if row else {"error": f"engineer not found: {github_login}"}
+    return dict(row) if row else {"error": f"未找到工程师：{github_login}"}
 
 
 @mcp.tool()
 def list_engineers() -> list[dict[str, Any]]:
-    """List all engineers."""
+    """列出全部工程师。"""
     missing = _missing_db_error()
     if missing:
         return [missing]
@@ -125,8 +125,8 @@ def _missing_db_error() -> dict[str, str] | None:
         return None
     return {
         "error": (
-            f"database not found at {DB_PATH}. "
-            "Create it with: python scripts/seed_db.py"
+            f"未找到数据库：{DB_PATH}。"
+            "请先运行：python scripts/seed_db.py"
         )
     }
 

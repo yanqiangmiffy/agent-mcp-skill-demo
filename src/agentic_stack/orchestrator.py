@@ -58,21 +58,21 @@ def parse_tool_call(call: Any) -> tuple[str, str, dict[str, Any]]:
     call_dict = _to_plain_dict(call)
     call_id = call_dict.get("id")
     if not call_id:
-        raise ValueError(f"tool call missing id: {call_dict}")
+        raise ValueError(f"工具调用缺少 id：{call_dict}")
 
     function = _to_plain_dict(call_dict.get("function", {}))
     name = function.get("name")
     if not name:
-        raise ValueError(f"tool call missing function name: {call_dict}")
+        raise ValueError(f"工具调用缺少函数名：{call_dict}")
 
     arguments = function.get("arguments") or {}
     if isinstance(arguments, str):
         try:
             arguments = json.loads(arguments)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"tool arguments for {name} are not valid JSON") from exc
+            raise ValueError(f"{name} 的工具参数不是合法 JSON") from exc
     if not isinstance(arguments, dict):
-        raise ValueError(f"tool arguments for {name} must be an object")
+        raise ValueError(f"{name} 的工具参数必须是对象")
 
     return str(call_id), str(name), arguments
 
@@ -113,11 +113,11 @@ async def run(question: str, config: AppConfig) -> None:
                     raise RuntimeError(f"duplicate MCP tool name: {tool.name}")
                 tool_owner[tool.name] = server_name
                 openai_tools.append(mcp_tool_to_openai(tool))
-                trace(f"[registered] {server_name}.{tool.name}")
+                trace(f"[已注册] {server_name}.{tool.name}")
 
         system = (
-            f"Today is {date.today().isoformat()}.\n\n"
-            "Use the following Skill exactly as the execution policy.\n\n"
+            f"今天日期是 {date.today().isoformat()}。\n\n"
+            "请严格按下面的 Skill 作为执行策略。\n\n"
             f"---\n{load_skill(config)}\n---"
         )
         messages: list[dict[str, Any]] = [
@@ -140,8 +140,8 @@ async def run(question: str, config: AppConfig) -> None:
 
             tool_calls = get_tool_calls(assistant_message)
             if not tool_calls:
-                print("\n=== Final Answer ===\n")
-                print(assistant_message.get("content") or "(empty)")
+                print("\n=== 最终回答 ===\n")
+                print(assistant_message.get("content") or "(空内容)")
                 return
 
             for call in tool_calls:
@@ -158,24 +158,24 @@ async def run(question: str, config: AppConfig) -> None:
                                 "content": result_text,
                             }
                         )
-                    trace(f"[step {step}] invalid tool call: {exc}")
+                    trace(f"[第 {step} 步] 工具调用无效：{exc}")
                     continue
 
                 owner = tool_owner.get(tool_name)
                 if owner is None:
                     result_text = json.dumps(
-                        {"error": f"unknown tool: {tool_name}"},
+                        {"error": f"未知工具：{tool_name}"},
                         ensure_ascii=False,
                     )
-                    trace(f"[step {step}] -> ?? {tool_name}({arguments}) [unknown]")
+                    trace(f"[第 {step} 步] -> ?? {tool_name}({arguments}) [未知]")
                 else:
-                    trace(f"[step {step}] -> {owner}.{tool_name}({arguments})")
+                    trace(f"[第 {step} 步] -> {owner}.{tool_name}({arguments})")
                     result = await sessions[owner].call_tool(
                         tool_name,
                         arguments=arguments,
                     )
                     result_text = serialize_tool_result(result)
-                    trace(f"[step {step}] <- {result_text.replace(chr(10), ' ')[:160]}")
+                    trace(f"[第 {step} 步] <- {result_text.replace(chr(10), ' ')[:160]}")
 
                 messages.append(
                     {
@@ -185,21 +185,21 @@ async def run(question: str, config: AppConfig) -> None:
                     }
                 )
 
-        trace(f"[stopped] max_steps={config.max_steps} reached without final answer")
+        trace(f"[已停止] 达到 max_steps={config.max_steps}，仍未得到最终回答")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run an OpenAI-compatible MCP + Skill agent.")
+    parser = argparse.ArgumentParser(description="运行 OpenAI SDK 兼容的 MCP + Skill Agent。")
     parser.add_argument(
         "--config",
         type=Path,
         default=DEFAULT_CONFIG,
-        help="Path to config.json.",
+        help="config.json 路径。",
     )
     parser.add_argument(
         "question",
         nargs="*",
-        help="Question for the agent. Defaults to DEFAULT_QUESTION/config.json.",
+        help="给 Agent 的问题。默认使用 DEFAULT_QUESTION/config.json。",
     )
     return parser
 
@@ -218,9 +218,9 @@ def _client_api_key(config: AppConfig) -> str | None:
     if config.openai_base_url and "api.openai.com" not in config.openai_base_url:
         return "not-needed"
     raise RuntimeError(
-        "OPENAI_API_KEY is required for the OpenAI API. "
-        "For local or third-party compatible endpoints, set OPENAI_BASE_URL "
-        "to that service's /v1 URL."
+        "使用 OpenAI 官方 API 时必须设置 OPENAI_API_KEY。"
+        "如果使用本地或第三方兼容端点，请把 OPENAI_BASE_URL "
+        "设置为该服务的 /v1 地址。"
     )
 
 

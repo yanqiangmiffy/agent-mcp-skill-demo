@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -16,27 +15,30 @@ from agentic_stack.config import DEFAULT_CONFIG, load_config
 
 
 ENGINEERS = [
-    ("Sara Chen", "schen", "sara@example.com", "US", "America/Los_Angeles"),
-    ("Marco Rossi", "marco-r", "marco@example.com", "IT", "Europe/Rome"),
-    ("Priya Patel", "priya-p", "priya@example.com", "IN", "Asia/Kolkata"),
-    ("Felix Mueller", "fmueller", "felix@example.com", "DE", "Europe/Berlin"),
-    ("Yuki Tanaka", "ytanaka", "yuki@example.com", "JP", "Asia/Tokyo"),
+    ("陈思远", "siyuan-chen", "siyuan.chen@example.cn", "CN", "Asia/Shanghai"),
+    ("李若彤", "ruotong-li", "ruotong.li@example.cn", "CN", "Asia/Shanghai"),
+    ("王启航", "qihang-wang", "qihang.wang@example.cn", "CN", "Asia/Shanghai"),
+    ("赵明轩", "mingxuan-zhao", "mingxuan.zhao@example.cn", "CN", "Asia/Shanghai"),
+    ("周可欣", "kexin-zhou", "kexin.zhou@example.cn", "CN", "Asia/Shanghai"),
 ]
 
 ISSUE_TITLES = [
-    ("API gateway returns 502 under load", "P1"),
-    ("Memory leak in ingestion worker", "P1"),
-    ("Database failover does not promote replica", "P0"),
-    ("Auth token refresh fails for SSO users", "P1"),
-    ("Disk usage alert on log-archive node", "P2"),
-    ("Stale data shown on dashboard for 5+ min", "P1"),
-    ("Slow query on customer search endpoint", "P2"),
-    ("Webhook delivery retries not exponential", "P2"),
-    ("CSV export truncates rows over 10k", "P1"),
-    ("OAuth callback rejects valid state token", "P1"),
-    ("Background job stuck in running state", "P2"),
-    ("Rate limiter counts cached responses", "P3"),
+    ("生产网关高峰期出现 502", "P1"),
+    ("订单同步任务内存持续上涨", "P1"),
+    ("主库故障切换未成功提升从库", "P0"),
+    ("企业微信单点登录刷新失败", "P1"),
+    ("日志归档节点磁盘空间告警", "P2"),
+    ("运营看板数据延迟超过 5 分钟", "P1"),
+    ("客户检索接口慢查询", "P2"),
+    ("支付回调重试间隔未按指数退避", "P2"),
+    ("对账 CSV 导出超过 1 万行被截断", "P1"),
+    ("开放平台 OAuth 回调状态校验失败", "P1"),
+    ("夜间批处理任务卡在运行中", "P2"),
+    ("缓存响应被错误计入限流", "P3"),
 ]
+
+ASSIGNEE_IDS = [1, 2, 3, 1, 4, 1, 2, 3, 1, 5, 2, 4]
+OPENED_HOURS_AGO = [3, 7, 11, 18, 26, 31, 44, 58, 72, 96, 120, 168]
 
 
 def main() -> int:
@@ -47,11 +49,11 @@ def main() -> int:
     if db_path.exists():
         db_path.unlink()
 
-    random.seed(42)
     now = datetime.now(timezone.utc).replace(microsecond=0)
     monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0)
 
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         conn.executescript(
             """
             CREATE TABLE engineers (
@@ -99,16 +101,20 @@ def main() -> int:
         conn.executemany("INSERT INTO rotations VALUES (?, ?, ?)", rota_rows)
 
         issue_rows = []
-        for issue_id, (title, priority) in enumerate(ISSUE_TITLES, start=1):
-            assignee_id = random.randint(1, len(ENGINEERS))
-            opened_at = (now - timedelta(hours=random.randint(2, 240))).isoformat()
+        for issue_id, ((title, priority), assignee_id, hours_ago) in enumerate(
+            zip(ISSUE_TITLES, ASSIGNEE_IDS, OPENED_HOURS_AGO),
+            start=1,
+        ):
+            opened_at = (now - timedelta(hours=hours_ago)).isoformat()
             issue_rows.append((issue_id, title, priority, "open", assignee_id, opened_at))
         conn.executemany("INSERT INTO issues VALUES (?, ?, ?, ?, ?, ?)", issue_rows)
         conn.commit()
+    finally:
+        conn.close()
 
     print(
-        f"Created {db_path} with {len(ENGINEERS)} engineers, "
-        f"{len(rota_rows)} rotations, and {len(issue_rows)} open issues."
+        f"已创建 {db_path}：{len(ENGINEERS)} 位工程师、"
+        f"{len(rota_rows)} 条值班轮次、{len(issue_rows)} 条开放问题。"
     )
     return 0
 
